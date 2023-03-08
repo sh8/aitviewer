@@ -80,6 +80,7 @@ class SMPLLayer(nn.Module, ABC):
         self._closest_joints = None
         self._vertex_faces = None
         self._faces = None
+        self._is_rhand = smpl_model_params.get("is_rhand", True)
 
     @property
     def faces(self):
@@ -236,18 +237,27 @@ class SMPLLayer(nn.Module, ABC):
             trans = torch.matmul(first_root_ori.unsqueeze(0), trans.unsqueeze(-1)).squeeze()
             trans = trans - trans[0:1]
 
-        output = self.bm(
-            body_pose=poses_body,
-            betas=betas,
-            global_orient=poses_root,
-            transl=trans,
-            left_hand_pose=poses_left_hand,
-            right_hand_pose=poses_right_hand,
-            jaw_pose=poses_jaw,
-            leye_pose=poses_leye,
-            reye_pose=poses_reye,
-            expression=expression,
-        )
+        if self.model_type == "mano":
+            output = self.bm(
+                body_pose=poses_body,
+                betas=betas,
+                global_orient=poses_root,
+                transl=trans,
+                hand_pose=poses_right_hand if self._is_rhand else poses_left_hand,
+            )
+        else:
+            output = self.bm(
+                body_pose=poses_body,
+                betas=betas,
+                global_orient=poses_root,
+                transl=trans,
+                left_hand_pose=poses_left_hand,
+                right_hand_pose=poses_right_hand,
+                jaw_pose=poses_jaw,
+                leye_pose=poses_leye,
+                reye_pose=poses_reye,
+                expression=expression,
+            )
 
         return output.vertices, output.joints
 
